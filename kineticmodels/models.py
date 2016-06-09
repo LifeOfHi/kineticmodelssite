@@ -509,6 +509,10 @@ class Apparatus(models.Model):
     xPrimeID = models.ForeignKey(Experiment)
 
 
+class CommonProperties(models.Model):
+    experiment = models.ForeignKey(Experiment)
+
+
 class Property(models.Model):
     name = models.CharField('Name of the property', max_length=64)
     property_id = models.CharField('Identification of property', max_length=64)
@@ -516,6 +520,15 @@ class Property(models.Model):
     units = models.CharField(max_length=64)
     description = models.CharField(max_length=128)
     value = models.FloatField()
+
+    class Meta:
+        abstract = True
+
+
+class CommonProperty(Property):
+    common_properties = models.ForeignKey(CommonProperties)
+
+
 
 
 class Component(models.Model):
