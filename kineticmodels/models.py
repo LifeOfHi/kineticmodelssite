@@ -129,8 +129,8 @@ class Source(models.Model):
     page numbers
     """
     bPrimeID = models.CharField('Prime ID',
-                                   max_length=9,
-                                   default='')
+                                max_length=9,
+                                default='')
     publication_year = models.CharField('Year of Publication',
                                         default='',
                                         max_length=4)
@@ -241,14 +241,14 @@ class Thermo(models.Model):
     preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    tref = models.FloatField('Reference State Temperature',
-                             blank=True,
-                             help_text='units: K',
-                             default=0.0)
-    pref = models.FloatField('Reference State Pressure',
-                             blank=True,
-                             help_text='units: Pa',
-                             default=0.0)
+    reference_temperature = models.FloatField('Reference State Temperature',
+                                              blank=True,
+                                              help_text='units: K',
+                                              default=0.0)
+    reference_pressure = models.FloatField('Reference State Pressure',
+                                           blank=True,
+                                           help_text='units: Pa',
+                                           default=0.0)
     dfH = models.FloatField('Enthalpy of Formation',
                             blank=True,
                             help_text='units: J/mol',
@@ -286,23 +286,23 @@ class Transport(models.Model):
     species = models.ForeignKey(Species)
     trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
-    depth = models.FloatField('Potential Well Depth',
-                              blank=True,
-                              help_text='units: K',
-                              default=0.0)
-    diameter = models.FloatField('Collision Diameter',
-                                 blank=True,
-                                 help_text='units: Angstroms',
-                                 default=0.0)
+    potential_well_depth = models.FloatField('Potential Well Depth',
+                                             blank=True,
+                                             help_text='units: K',
+                                             default=0.0)
+    collision_diameter = models.FloatField('Collision Diameter',
+                                           blank=True,
+                                           help_text='units: Angstroms',
+                                           default=0.0)
     dipole_moment = models.FloatField(blank=True,
                                       help_text='units: Debye',
                                       default=0.0)
     polarizability = models.FloatField(blank=True,
                                        help_text='units: cubic Angstroms',
                                        default=0.0)
-    rot_relax = models.FloatField('Rotational Relaxation',
-                                  blank=True,
-                                  default=0.0)
+    rotational_relaxation = models.FloatField('Rotational Relaxation',
+                                              blank=True,
+                                              default=0.0)
 
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)
@@ -488,7 +488,41 @@ class ThermoComment(models.Model):
     def __unicode__(self):
         return unicode(self.comment)
 
+
 # class Element(models.Model):
 #     isotope massnumber
 #     isotope relativeatomicmass
 #     atomicmass uncertainty
+
+class Experiment(models.Model):
+    """
+    An experiment model
+    """
+    xPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True, primary_key=True)
+    bPrimeID = models.ForeignKey(Source)
+
+
+class Apparatus(models.Model):
+    kind = models.CharField('The kind of apparatus', max_length=64)
+    mode = models.CharField('The mode of apparatus', max_length=64)
+
+    xPrimeID = models.ForeignKey(Experiment)
+
+
+class Property(models.Model):
+    name = models.CharField('Name of the property', max_length=64)
+    id = models.CharField('Identification of property', max_length=64)
+    label = models.CharField(max_length=64)
+    units = models.CharField(max_length=64)
+    description = models.CharField(max_length=128)
+    value = models.FloatField()
+
+
+class Component(models.Model):
+    amount = models.FloatField()
+    property = models.ForeignKey(Property)
+
+
+class SpeciesLink(models.Model):
+    name = models.ForeignKey(SpecName)
+    sPrimeID = models.ForeignKey(Species)

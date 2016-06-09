@@ -310,10 +310,10 @@ class TransportImporter(Importer):
                 dj_trans.geometry = float(value.text)
             elif parameter.attrib['name'] == 'potentialWellDepth':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.depth = float(value.text)
+                dj_trans.potential_well_depth = float(value.text)
             elif parameter.attrib['name'] == 'collisionDiameter':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.diameter = float(value.text)
+                dj_trans.collision_diameter = float(value.text)
             elif parameter.attrib['name'] == 'dipoleMoment':
                 value = parameter.find('prime:value', namespaces=ns)
                 dj_trans.dipole_moment = float(value.text)
@@ -322,7 +322,7 @@ class TransportImporter(Importer):
                 dj_trans.polarizability = float(value.text)
             elif parameter.attrib['name'] == 'rotationalRelaxation':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.rot_relax = float(value.text)
+                dj_trans.rotational_relaxation = float(value.text)
         dj_trans.save
 
 
@@ -499,15 +499,18 @@ def main(top_root):
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
             print "We have found the Species which we can import!"
             TransportImporter(root).import_data()
+            ThermoImporter(root).import_data()
+            print "skipping for now, to test the next importer..."; continue
             SpeciesImporter(root).import_catalog()
-        #             ThermoImporter(root).import_data()
         elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
             print "We have found the Reactions which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             # print "skipping for now, to test the next importer..."; continue
             KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
             print "We have found the Kinetic Models which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
