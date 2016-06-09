@@ -511,7 +511,7 @@ class Apparatus(models.Model):
 
 class Property(models.Model):
     name = models.CharField('Name of the property', max_length=64)
-    id = models.CharField('Identification of property', max_length=64)
+    property_id = models.CharField('Identification of property', max_length=64)
     label = models.CharField(max_length=64)
     units = models.CharField(max_length=64)
     description = models.CharField(max_length=128)
