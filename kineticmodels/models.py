@@ -340,6 +340,18 @@ class Reaction(models.Model):
 
 
 class Kinetics(models.Model):
+    rkPrimeID = models.CharField(blank=True, max_length=10)
+    reaction = models.OneToOneField(Reaction)
+    source = models.ForeignKey(Source, null=True)
+    is_reverse = models.BooleanField(
+        default=False,
+        help_text='Is this the rate for the reverse reaction?')
+
+    class Meta:
+        abstract = True
+
+
+class ArrheniusKinetics(Kinetics):
     """
     A reaction rate expression.
     
@@ -357,18 +369,12 @@ class Kinetics(models.Model):
     e value
     bibliography
     """
-    reaction = models.ForeignKey(Reaction)
-    source = models.ForeignKey(Source, null=True)
-    rkPrimeID = models.CharField(blank=True, max_length=10)
     relative_uncertainty = models.FloatField(blank=True, null=True)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
     E_value = models.FloatField(blank=True, null=True)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
-    is_reverse = models.BooleanField(
-        default=False,
-        help_text='Is this the rate for the reverse reaction?')
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
 
@@ -377,7 +383,7 @@ class Kinetics(models.Model):
             s=self)
 
     class Meta:
-        verbose_name_plural = "Kinetics"
+        verbose_name_plural = "Arrhenius Kinetics"
 
 
 class Stoichiometry(models.Model):
@@ -440,7 +446,7 @@ class KinModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='Comment')
+    kinetics = models.ManyToManyField(ArrheniusKinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
     transport = models.ManyToManyField(Transport)
     additional_info = models.CharField(max_length=1000)
@@ -465,7 +471,7 @@ class Comment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(Kinetics)
+    kinetics = models.ForeignKey(ArrheniusKinetics)
     kinmodel = models.ForeignKey(KinModel)
     comment = models.CharField(blank=True, max_length=1000)
 
@@ -494,48 +500,4 @@ class ThermoComment(models.Model):
 #     isotope relativeatomicmass
 #     atomicmass uncertainty
 
-class Experiment(models.Model):
-    """
-    An experiment model
-    """
-    xPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True, primary_key=True)
-    bPrimeID = models.ForeignKey(Source)
 
-
-class Apparatus(models.Model):
-    kind = models.CharField('The kind of apparatus', max_length=64)
-    mode = models.CharField('The mode of apparatus', max_length=64)
-
-    xPrimeID = models.ForeignKey(Experiment)
-
-
-class CommonProperties(models.Model):
-    experiment = models.ForeignKey(Experiment)
-
-
-class Property(models.Model):
-    name = models.CharField('Name of the property', max_length=64)
-    property_id = models.CharField('Identification of property', max_length=64)
-    label = models.CharField(max_length=64)
-    units = models.CharField(max_length=64)
-    description = models.CharField(max_length=128)
-    value = models.FloatField()
-
-    class Meta:
-        abstract = True
-
-
-class CommonProperty(Property):
-    common_properties = models.ForeignKey(CommonProperties)
-
-
-
-
-class Component(models.Model):
-    amount = models.FloatField()
-    property = models.ForeignKey(Property)
-
-
-class SpeciesLink(models.Model):
-    name = models.ForeignKey(SpecName)
-    sPrimeID = models.ForeignKey(Species)
