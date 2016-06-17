@@ -1,4 +1,6 @@
 from django.db import models
+# Added to support RMG integration
+from rmgpy.thermo import NASA, NASAPolynomial
 
 # Create your models here.
 """
@@ -6,7 +8,7 @@ Reaction r1 'A -> B'
   kinetics according to model m1: (rate k1)
   kinetics according to model m2: (rate k2)
   kinetics according to model m3: (rate k2)
-  
+
 
 Reactions [ r1, ... ]
 Models    [ m1, m2, m3 ]
@@ -118,7 +120,7 @@ class Author(models.Model):
 class Source(models.Model):
     """
     A source, or bibliography item.
-    
+
     This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
     *****in catalog******
     publication year
@@ -156,7 +158,7 @@ class Source(models.Model):
 class Authorship(models.Model):
     """
     Who authored what paper.
-    
+
     This allows many-to-many join between Sources (publications)
     and Authors, keeping track of author ordering on each publication.
     """
@@ -172,7 +174,7 @@ class Authorship(models.Model):
 class Species(models.Model):
     """
     A chemical species.
-    
+
     This is the equivalent of 'Species' in PrIMe, which contain:
     *****in catalog*******
     bibliography
@@ -185,23 +187,24 @@ class Species(models.Model):
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True, max_length=50)
     inchi = models.CharField('InChI', blank=True, max_length=500)
-    CAS = models.CharField('CAS Registry Number', blank=True, max_length=400)
-
-    def products(self):
-        return self.filter(stoichiometry__stoichiometry__gt=0)
-
-    def reactants(self):
-        return self.filter(stoichiometry__stoichiometry__lt=0)
+    cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
 
     def __unicode__(self):
         return u"{s.id} {s.formula!s}".format(s=self)
+
+    # This method should output an object in RMG format
+    # Will be used in RMG section to access the PRIME DB
+    def toRMG(self):
+        # This code will output a species in a format acceptable by RMG
+        # *** Output will be rmg_object ***
+        return rmg_object
 
     class Meta:
         ordering = ('sPrimeID',)
         verbose_name_plural = "Species"
 
 
-class SpecName(models.Model):
+class SpeciesName(models.Model):
     """
     A Species Name
     """
@@ -215,12 +218,48 @@ class SpecName(models.Model):
         verbose_name_plural = "Alternative Species Names"
 
 
+class Isomer(models.Model):
+    """
+    An isomer of a species which stores the InChI of the species.
+
+    This doesn't have an equivalent term in rmg the most simmilar term would
+    be an InChI
+
+    An Isomer is linked to Structures by a one to many relationship because
+    an isomer may point to multiple structures
+    """
+
+    inchi = models.CharField('InChI', blank=True, max_length=500)
+    species = models.ManyToManyField(Species)
+
+
+    def __unicode__(self):
+        return u"{s.inchi}".format(s=self)
+
+
+class Structure(models.Model):
+    """
+    A structure is the resonance structure of Isomers.
+
+    The equivalent term in RMG would be a molecule
+    """
+
+    isomer = models.ForeignKey(Isomer)
+    smiles = models.CharField('SMILES', blank=True, max_length=500)
+    adjacencyList = models.TextField('Adjacency List')
+    electronicState = models.IntegerField('Electronic State')
+
+    def __unicode__(self):
+        return u"{s.adjacencyList}".format(s=self)
+
+
+
 class Thermo(models.Model):
     """
     A thermochemistry polynomial set
-    
+
     What Kinetics is to Reaction, Thermo is to Species.
-    
+
     This is the equivalent of the 'th' data within 'Species/data' in PrIMe,
     which contain:
     *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
@@ -274,6 +313,25 @@ class Thermo(models.Model):
     coefficient_6_2 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
     coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
 
+    # This method should output an object in RMG format
+    # Will be used in RMG section to access the PRIME DB
+    def toRMG(self):
+        "Returns an RMG object"
+        polynomials = []
+        for polynomial_number in [1,2]:
+            coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(j=coefficient_number,i=polynomial_number))) for coefficient_number in range(1,8) ]
+            polynomial = NASAPolynomial(coeffs=coeffs,
+                           Tmin=float(getattr(self, 'lower_temp_bound_{i}'.format(i=polynomial_number))),
+                           Tmax=float(getattr(self, 'upper_temp_bound_{i}'.format(i=polynomial_number))),
+                           E0=None,
+                           comment=''
+                           )
+            polynomials.append(polynomial)
+        rmg_object = NASA(polynomials=polynomials,
+                          Tmin=polynomials[0].Tmin,
+                          Tmax=polynomials[1].Tmin)
+        return rmg_object
+
     def __unicode__(self):
         return unicode(self.id)
 
@@ -311,15 +369,15 @@ class Transport(models.Model):
 class Reaction(models.Model):
     """
     A chemical reaction, with several species, has a rate in one or more models.
-    
+
     Should have:
      * species (linked via stoichiometry)
      * prime ID
-     
+
     It will be linked into various kinetic models and sources
     via the kinetics objects.
     There will not be a unique source for each reaction.
-     
+
     This is the equivalent of 'Reactions' in PrIMe, which contain:
     *****in catalog******
     species involved w/stoichiometries
@@ -338,6 +396,50 @@ class Reaction(models.Model):
     class Meta:
         ordering = ('rPrimeID',)
 
+    def stoich_species(self):
+        """
+        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        """
+        reaction = []
+        for stoich in self.stoichiometry_set.all():
+            reaction.append((stoich.stoichiometry, stoich.species))
+        reaction.sort()
+        return reaction
+
+    def products(self):
+        """
+        returns a list of products, for elementary reaction,
+        with each product repeated the number of times it appears,
+        eg. [B, B] if the reaction is A <=> 2B.
+
+        Raises error for fractional stoichiometry.
+        """
+        specs = []
+        for n, s in self.stoich_species():
+            if n < 0:
+                continue
+            if n != int(n):
+                raise NotImplementedError
+            specs.extend([s] * int(n))
+        return specs
+
+    def reactants(self):
+        """
+        returns a list of reactants, for elementary reaction,
+        with each product repeated the number of times it appears,
+        eg. [A, A] if the reaction is 2A <=> B.
+
+        Raises error for fractional stoichiometry.
+        """
+        specs = []
+        for n, s in self.stoich_species():
+            if n > 0:
+                continue
+            if n != int(n):
+                raise NotImplementedError
+            specs.extend([s] * int(-n))
+        return specs
+
 
 class Kinetics(models.Model):
     rkPrimeID = models.CharField(blank=True, max_length=10)
@@ -354,12 +456,12 @@ class Kinetics(models.Model):
 class ArrheniusKinetics(Kinetics):
     """
     A reaction rate expression.
-    
+
     For now let's keep things simple, and only use 3-parameter Arrhenius
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     May not have a unique source.
-    
+
     This is the equivalent of the 'rk' data within 'Reactions/data'
     in PrIMe, which contain:
     *****in data********
@@ -389,7 +491,7 @@ class ArrheniusKinetics(Kinetics):
 class Stoichiometry(models.Model):
     """
     How many times a species is created in a reaction.
-    
+
     Reactants have negative stoichiometries, products have positive.
     eg. in the reaction A <=> 2B  the stoichiometry of A is -1 and of B is +2
     In elementary reactions these are always integers, but chemkin allows floats,
@@ -419,10 +521,13 @@ class Stoichiometry(models.Model):
 #     additional info
 
 
-class KinModel(models.Model):
+
+
+
+class KineticModel(models.Model):
     """
     A kinetic model.
-    
+
     Should have one of these:
      * source # eg. citation
      * chemkin_reactions_file
@@ -432,7 +537,7 @@ class KinModel(models.Model):
     And many of these:
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
-     
+
     This is the equivalent of 'Models' in PrIMe, which contain:
     ******in catalog*******
     model name
@@ -466,13 +571,13 @@ class KinModel(models.Model):
 class Comment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
-    
+
     There may not have been a comment, eg. it may be an empty string,
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
     kinetics = models.ForeignKey(ArrheniusKinetics)
-    kinmodel = models.ForeignKey(KinModel)
+    kinmodel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
@@ -482,13 +587,13 @@ class Comment(models.Model):
 class ThermoComment(models.Model):
     """
     The comment that a kinetic model made about a thermo entry it used.
-    
+
     There may not have been a comment, eg. it may be an empty string,
     but an entry in this table or the existence of this object
     links that thermo entry with that kinetic model.
     """
     thermo = models.ForeignKey(Thermo)
-    kinmodel = models.ForeignKey(KinModel)
+    kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
