@@ -610,3 +610,23 @@ class ThermoComment(models.Model):
 #     isotope massnumber
 #     isotope relativeatomicmass
 #     atomicmass uncertainty
+
+class Falloff(models.Model):
+    """
+    Note: rateLawType?
+        Form:   sri -> a, b, c parameters
+                troe -> T*, T**, T***, a
+                constant Fc -> Fc w/ uncertainty
+
+    """
+    kinetics = models.OneToOneField(Kinetics)
+
+    form = models.CharField(blank=True, max_length=100)
+
+    temperature_1 = models.FloatField('Temperature*', default=0.0)  # troe
+    temperature_2 = models.FloatField('Temperature**', default=0.0)  # troe
+    temperature_3 = models.FloatField('Temperature***', default=0.0)  # troe
+    a = models.FloatField('A', default=0.0)  # troe, sri
+    b = models.FloatField('B', defualt=0.0)  # sri
+    c = models.FloatField('C', defualt=0.0)  # sri
+    Fc = models.FloatField('Constant Fc', default=0.0)  # Constant Fc
