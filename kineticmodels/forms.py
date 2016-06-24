@@ -33,7 +33,6 @@ This module defines the Django forms used by the kineticsmodels app.
 """
 
 from django import forms
-
 from models import KineticModel, Source, Species, Reaction
 
 ################################################################################
@@ -63,7 +62,16 @@ class EditKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        exclude = ()
+        exclude = ('kinetics', 'thermo', 'transport')
+
+class UploadKineticModelForm(forms.ModelForm):
+    """
+    A Django form for uploading a kinetic model.
+    """
+    class Meta:
+        model = KineticModel
+        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+
 
 # For for editing a Reaction
 class EditReactionForm(forms.ModelForm):
@@ -75,10 +83,50 @@ class EditReactionForm(forms.ModelForm):
         exclude = ()        
 ################################################################################
 
-class UploadModelForm(forms.ModelForm):
+################################################################################
+
+#Form for searching Species
+class SpeciesSearchForm(forms.Form):
     """
-    A Django form for uploading a kinetic model.
+    A django form for searching through a Species
     """
-    class Meta:
-        model = KineticModel
-        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+    # class Meta:
+    #     model = Species
+    #     fields = ('formula', 'sPrimeID', 'inchi', 'cas')
+
+
+    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
+    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
+    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
+
+
+#Form for searching Sources
+class SourceSearchForm(forms.Form):
+    """
+    A django form for searching through a Sources
+    """
+
+    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
+    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
+    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)
+
+
+#Form for searching Reactions
+class ReactionSearchForm(forms.Form):
+    """
+    A django form for searching through a Reaction
+    """
+
+    rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9, strip = True, required=False)
+
+    reactant1Formula = forms.CharField(label="Reactant #1 Formula", max_length=50, strip = True, required=False)
+    reactant2Formula = forms.CharField(label="Reactant #2 Formula", max_length=50, strip = True, required=False)
+
+    #is_reversible = models.BooleanField(label="Is Reversible?", default=True, help_text='Is this reaction reversible?')
+
+    product1Formula = forms.CharField(label="Product #1 Formula", max_length=50, strip = True, required=False)
+    product2Formula = forms.CharField(label="Product #2 Formula", max_length=50, strip = True, required=False)
+
+

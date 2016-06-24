@@ -1,26 +1,8 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/reaction.html" %}
 
-{% block title %}Kinetic Models Database: Reaction List{% endblock %}
-{% block page_title %}Kinetic Models Database: Reaction List{% endblock %}
+{% block title %}{{ block.super }} List{% endblock %}
+{% block page_title %}{{ block.super }} List{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the following pages:
-      source,
-      source_editor,
-      reaction,
-      reaction_editor,
-
-
-<a href="{% url 'kineticmodels.views.reaction_editor' reaction_id=reaction.id%}">Edit</a>
--->
-
-{% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.reaction_list' %}">Reaction List</a>
-{% endblock %}
-
-{% block sidebar_items %}
-{% endblock %}
 
 {% block page_body %}
 
@@ -46,12 +28,12 @@
     Am not currently including a single reaction view
 -->
     <tr>
-        <td>{{ reaction.pk}}</td>
-        <td>{{ reaction.rPrimeID }}</td>
+        <td>{{ reaction.pk }}</td>
+        <td><a href="http://warehouse.primekinetics.org/depository/reactions/catalog/{{ reaction.rPrimeID }}.xml">{{ reaction.rPrimeID }}</a></td>
         <td>{{ reaction.reactants }}</td>
         <td>{{ reaction.products }}</td>
         <td>{{ reaction.is_reversible }}</td>
-        <td><a href="{% url 'reaction' reaction_id=reaction.id%}">View</a></td>
+        <td><a href="{% url 'reaction view' reaction_id=reaction.id%}">View</a></td>
         <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
     </tr>
 {% endfor %}

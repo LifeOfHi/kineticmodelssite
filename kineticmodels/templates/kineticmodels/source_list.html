@@ -1,0 +1,51 @@
+{% extends "kineticmodels/source.html" %}
+
+{% block title %}{{ block.super }} List{% endblock %}
+{% block page_title %}{{ block.super }} List{% endblock %}
+
+
+{% block page_body %}
+
+<table>
+    <tr>
+        <th>Source ID<th>
+        <th>Title</th>
+        <th>Journal</th>
+        <th>Year</th>
+    </tr>
+{% for source in sources %}
+    <tr>
+        <td>{{ source.pk|slice:":8" }}<td>
+        <td>{{ source.source_title }}</td>
+        <td>{{ source.journal_name }}</td>
+        <td>{{ source.pub_year }}</td>
+        <td><a href="{% url 'source view' source_id=source.pk %}">View</a></td>
+        <td><a href="{% url 'source editor' source_id=source.id%}">Edit</a></td>
+    </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
+{% endfor %}
+</table>
+<br/>
+
+    <footer class="footer-basic-centered">
+
+      <div class="pagination">
+          <span class="step-links">
+              {% if sources.has_previous %}
+                  <a href="?page={{ sources.previous_page_number }}">previous</a>
+              {% endif %}
+
+              <span class="current">
+                  Page {{ sources.number }} of {{ sources.paginator.num_pages }}.
+              </span>
+
+              {% if sources.has_next %}
+                  <a href="?page={{ sources.next_page_number }}">next</a>
+              {% endif %}
+          </span>
+      </div>
+    </footer>
+
+
+{% endblock %}

@@ -1,31 +1,15 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/species.html" %}
 
-{% block title %}Kinetic Models Database: Species List{% endblock %}
-{% block page_title %}Kinetic Models Database: Species List{% endblock %}
+{% block title %}{{ block.super }} List{% endblock %}
+{% block page_title %}{{ block.super }} List{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the following pages:
-      source,
-      source_editor,
-      species,
-      species_editor,
-
-
-<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
--->
-
-{% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-{% endblock %}
-
-{% block sidebar_items %}
-{% endblock %}
 
 {% block page_body %}
 
 <!-- NRC
   The following HTML code will list all of the species currently in the database
 -->
+
 
 <table>
     <!-- NRC
@@ -39,6 +23,8 @@
         <th>CAS</th>
         <th></th>
     </tr>
+
+
 {% for species in species_list %}
 <!-- NRC
     Table properties must be edited to include all relevant species fields(Done)
@@ -46,13 +32,15 @@
 -->
     <tr>
         <td>{{ species.pk}}</td>
-        <td>{{ species.sPrimeID }}</td>
+        <td><a href="http://warehouse.primekinetics.org/depository/species/catalog/{{ species.sPrimeID }}.xml">{{ species.sPrimeID }}</a></td>
         <td>{{ species.formula }}</td>
         <td>{{ species.inchi }}</td>
         <td>{{ species.CAS }}</td>
-        <td><a href="{% url 'species' species_id=species.id%}">View</a></td>
+        <td><a href="{% url 'species view' species_id=species.id%}">View</a></td>
         <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 </table>
 <br/>

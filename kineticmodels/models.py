@@ -131,8 +131,8 @@ class Source(models.Model):
     page numbers
     """
     bPrimeID = models.CharField('Prime ID',
-                                max_length=9,
-                                default='')
+                                   max_length=9,
+                                   default='')
     publication_year = models.CharField('Year of Publication',
                                         default='',
                                         max_length=4)
@@ -226,7 +226,7 @@ class Isomer(models.Model):
     be an InChI
 
     An Isomer is linked to Structures by a one to many relationship because
-    an isomer may point to multiple structures
+    an isomer may point to multiple structures 
     """
 
     inchi = models.CharField('InChI', blank=True, max_length=500)
@@ -241,9 +241,9 @@ class Structure(models.Model):
     """
     A structure is the resonance structure of Isomers.
 
-    The equivalent term in RMG would be a molecule
+    The equivalent term in RMG would be a molecule    
     """
-
+    
     isomer = models.ForeignKey(Isomer)
     smiles = models.CharField('SMILES', blank=True, max_length=500)
     adjacencyList = models.TextField('Adjacency List')
@@ -411,7 +411,7 @@ class Reaction(models.Model):
         returns a list of products, for elementary reaction,
         with each product repeated the number of times it appears,
         eg. [B, B] if the reaction is A <=> 2B.
-
+        
         Raises error for fractional stoichiometry.
         """
         specs = []
@@ -428,7 +428,7 @@ class Reaction(models.Model):
         returns a list of reactants, for elementary reaction,
         with each product repeated the number of times it appears,
         eg. [A, A] if the reaction is 2A <=> B.
-
+        
         Raises error for fractional stoichiometry.
         """
         specs = []
@@ -442,28 +442,34 @@ class Reaction(models.Model):
 
 
 class Kinetics(models.Model):
-    rkPrimeID = models.CharField(blank=True, max_length=10)
-    reaction = models.OneToOneField(Reaction)
-    source = models.ForeignKey(Source, null=True)
-    is_reverse = models.BooleanField(
-        default=False,
-        help_text='Is this the rate for the reverse reaction?')
-
-    class Meta:
-        abstract = True
-
-
-class ArrheniusKinetics(Kinetics):
     """
     A reaction rate expression.
-
-    For now let's keep things simple, and only use 3-parameter Arrhenius
+    
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     May not have a unique source.
 
     This is the equivalent of the 'rk' data within 'Reactions/data'
     in PrIMe, which contain:
+    """
+    rkPrimeID = models.CharField(blank=True, max_length=10)
+    reaction = models.OneToOneField(Reaction)
+    source = models.ForeignKey(Source, null=True)
+    relative_uncertainty = models.FloatField(blank=True, null=True)
+    is_reverse = models.BooleanField(
+        default=False,
+        help_text='Is this the rate for the reverse reaction?')
+
+    class Meta:
+        verbose_name_plural = "Kinetics"
+
+
+class ArrheniusKinetics(models.Model):
+    """
+    A reaction rate expression in modified Arrhenius form
+
+    For now let's keep things simple, and only use 3-parameter Arrhenius
+
     *****in data********
     a value
     a value uncertainty
@@ -471,11 +477,12 @@ class ArrheniusKinetics(Kinetics):
     e value
     bibliography
     """
-    relative_uncertainty = models.FloatField(blank=True, null=True)
+    kinetics = models.OneToOneField(Kinetics)
+
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(blank=True, null=True)
+    E_value = models.FloatField(default=0.0)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
@@ -551,9 +558,9 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(ArrheniusKinetics, through='Comment')
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment')
-    transport = models.ManyToManyField(Transport)
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
+    transport = models.ManyToManyField(Transport, blank=True)
     additional_info = models.CharField(max_length=1000)
     #     reaction=kinetics something
     #     species=reaction something
@@ -568,7 +575,7 @@ class KineticModel(models.Model):
         verbose_name_plural = "Kinetic Models"
 
 
-class Comment(models.Model):
+class KineticsComment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
 
@@ -576,8 +583,8 @@ class Comment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(ArrheniusKinetics)
-    kinmodel = models.ForeignKey(KineticModel)
+    kinetics = models.ForeignKey(Kinetics)
+    kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
@@ -599,10 +606,7 @@ class ThermoComment(models.Model):
     def __unicode__(self):
         return unicode(self.comment)
 
-
 # class Element(models.Model):
 #     isotope massnumber
 #     isotope relativeatomicmass
 #     atomicmass uncertainty
-
-
